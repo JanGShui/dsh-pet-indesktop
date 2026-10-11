@@ -166,6 +166,7 @@ from . import settings_file_interpret
 from . import settings_interaction
 from . import settings_music
 from . import settings_pet_controls
+from . import settings_reset
 
 
 # 语言配置页只展示用户能理解的事件名称；内部 key 仍用于保存和渲染。
@@ -1738,6 +1739,10 @@ class ModernSettingsDialog(QDialog):
             [
                 ("应用启动", claim("autostart", "harness_autostart", "harness_launch_target")),
                 ("窗口与系统", claim("dock_icon", "on_top", "auto_hide_fullscreen", "cursor_hidden_passthrough", "stream_capture")),
+                # 「恢复默认」放在「常规」域末尾（issue #220）：配置被改坏时的兜底
+                # 自助入口。行与控件在 settings_reset 构建（行数预算原因），
+                # 且创建时机晚于 _rebuild_domain_navigation 的行快照，不需要 claim。
+                ("恢复默认", settings_reset.settings_rows(self)),
                 # 「多开」分组已随拓扑收口 Phase A 隐藏（见上方注释）
             ]
         )
