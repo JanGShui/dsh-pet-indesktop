@@ -41,6 +41,9 @@ _SWP_NOSIZE = 0x0001
 _SWP_NOMOVE = 0x0002
 _SWP_NOACTIVATE = 0x0010
 
+# ---- Win32：Shell「不是全屏应用」豁免用属性名 ----
+_NON_RUDE_PROP = "NonRudeHWND"
+
 
 class _WinRect(ctypes.Structure):
     _fields_ = [('left', ctypes.c_long), ('top', ctypes.c_long),
@@ -113,6 +116,33 @@ def _set_windows_topmost(hwnd: int, on: bool, user32=None) -> bool:
         0, 0, 0, 0,
         _SWP_NOSIZE | _SWP_NOMOVE | _SWP_NOACTIVATE,
     ))
+
+
+def _set_windows_non_rude_hwnd(hwnd: int, user32=None) -> bool:
+    """告诉 Shell「本窗不是全屏应用」：任务栏不再被压到 z 序底部。
+
+    背景（issue #296）：Shell 的 "rude window manager" 按几何判定全屏应用——
+    铺满整块显示器的窗口会让任务栏移到 z 序底部，用户观感是「任务栏被所有
+    悬浮窗挡住」。overlay 合成窗铺满 ``screen.geometry()``（含任务栏），
+    4.3.0 默认 overlay 后高概率复现；4.2.1 的 legacy 小窗不受影响。
+
+    MS 文档（``ITaskbarList2::MarkFullscreenWindow`` Remarks）：自 Windows 7
+    起，``SetProp(hwnd, L"NonRudeHWND", HANDLE(TRUE))`` 可豁免该判定；它与
+    ``MarkFullscreenWindow(FALSE)`` 的差别是 Shell **不会**回落到自动检测。
+
+    **必须在窗口显示之前调用**（本机探针：Qt ``showEvent`` 时原生窗
+    ``IsWindowVisible=False``，满足前置条件）。属性挂在 HWND 上：
+    ``setWindowFlag`` 重建原生窗后丢失，靠下一次 ``showEvent`` 重放。
+
+    ``user32=None`` 时取真实 user32 并声明 argtypes——64 位下 HWND/HANDLE 是
+    指针，不声明会被 ctypes 默认 int32 截断成无效句柄（同
+    ``_set_windows_topmost`` 的 6ebfd2b 口径）。返回 API 是否成功。
+    """
+    if user32 is None:
+        user32 = ctypes.windll.user32
+        user32.SetPropW.argtypes = [wintypes.HWND, wintypes.LPCWSTR, wintypes.HANDLE]
+        user32.SetPropW.restype = wintypes.BOOL
+    return bool(user32.SetPropW(hwnd, _NON_RUDE_PROP, ctypes.c_void_p(1)))
 
 
 class WindowsPerPixelInputController:

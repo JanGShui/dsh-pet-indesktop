@@ -57,7 +57,11 @@ from .sprite_slingshot import SlingshotController
 from .tick_driver import TickDriver
 
 if sys.platform == "win32":
-    from .platform_win import WindowsPerPixelInputController, _set_windows_no_activate
+    from .platform_win import (
+        WindowsPerPixelInputController,
+        _set_windows_no_activate,
+        _set_windows_non_rude_hwnd,
+    )
 
 # 命中阈值：alpha >= 16 视为不透明（与现架构 _is_transparent_at 同口径）
 ALPHA_HIT_THRESHOLD = 16
@@ -211,6 +215,14 @@ class OverlayWindow(QWidget):
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
+        # Windows：必须在原生窗显示之前剥夺 Shell 的「全屏应用」判定
+        # （issue #296）。overlay 铺满 screen.geometry()（含任务栏），会被
+        # rude window manager 当成全屏应用并把任务栏压到 z 序底部——4.3.0
+        # 默认 overlay 后表现为「启动桌宠，任务栏被普通窗口挡住」。属性挂在
+        # HWND 上：on_top 的 setWindowFlag 重建原生窗后丢失，靠下一次
+        # showEvent 重放（与下面 _set_windows_no_activate 同一条先例）。
+        if sys.platform == "win32":
+            _set_windows_non_rude_hwnd(int(self.winId()))
         # macOS：原生关掉 hidesOnDeactivate（issue #262 / #273）。Cocoa 失活时
         # order out 窗口的**真正判据**就是这个原生属性；Qt 属性
         # （__init__ 里已下发的 WA_MacAlwaysShowToolWindow）在部分系统版本上被
