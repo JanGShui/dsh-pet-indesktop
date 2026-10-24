@@ -120,6 +120,7 @@ PROBE ALL OK
 | 相关族 | `pytest tests/test_overlay_chat_proactive.py tests/test_sprite_menu_parity.py tests/test_single_process_shared.py tests/test_chat_window_lifecycle.py tests/test_island_chat_identity.py tests/test_chat_subsystem.py` | 231 passed, 1 skipped（20.59 s） |
 | 受影响时序族满载 3 遍 | `pytest tests/test_look_sync_session_fallback.py tests/test_chat_window_lifecycle.py` ×3 | 20 passed ×3（2.83 / 2.91 / 8.17 s；族含 SessionStore 异步写盘线程） |
 | 全量 | `QT_QPA_PLATFORM=offscreen python -m pytest -q` | **9057 passed, 25 skipped, 15 warnings（1240.49 s）** |
+| 全量（最终 HEAD 复跑，含本报告） | `.venv/Scripts/python.exe -m pytest -q`（本机 Windows 真实环境，未设 offscreen） | **9059 passed, 25 skipped, 15 warnings（1212.26 s）**，0 failed；比首跑多 2 条——本报告被 `tests/test_pr_report_discipline.py:119/133` 两条 `parametrize("report", GOVERNED)` 用例覆盖（首跑时报告文件尚未落盘），`--collect-only` 计 9084 = 9059 + 25 |
 | 断言有效性 | 修复前红即天然注入缺陷重跑 | 同一批用例修复前 3 failed → 修复后 12 passed |
 | 架构红线 | `tests/test_architecture.py`（含于全量） | 通过（全量 0 failed） |
 
