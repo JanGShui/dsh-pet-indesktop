@@ -26,7 +26,7 @@ instance_id)`）同一视图；聊天窗已打开路径（`append_look_sync`）�
 
 | 文件 | 增删 | 改动意图 |
 |---|---|---|
-| `pet/app.py` | +7 / −4 | `PetInstance.sync_look_to_chat` 兜底分支（app.py:1245-1252）：取角色从 `self._identity_config().get(...)` 改回 `self.config.get(...)`。根因：`_identity_config` 是 `AppShell` 的方法（app.py:3693），`PetInstance` 没有——v4.3.4（a9c42ac6）把 AppShell 语境的写法搬进了 PetInstance。而 `PetInstance.config` 本来就是每宠路由视图（构造点 app.py:1476 主宠 `SlotRoutedConfig(…,0)`、app.py:4413 子宠 `route_settings_config(…)`），每宠键直接可读，那次改动想防的「读到全局面出厂默认」对 PetInstance 不成立。注释同步改写，写明为什么这里是 `self.config`、不能搬 `_identity_config()` |
+| `pet/app.py` | +7 / −4 | `PetInstance.sync_look_to_chat` 兜底分支（app.py:1245-1253）：取角色从 `self._identity_config().get(...)` 改回 `self.config.get(...)`。根因：`_identity_config` 是 `AppShell` 的方法（app.py:3688），`PetInstance` 没有——v4.3.4（a9c42ac6）把 AppShell 语境的写法搬进了 PetInstance。而 `PetInstance.config` 本来就是每宠路由视图（构造点 app.py:1471 主宠 `SlotRoutedConfig(…,0)`、app.py:4408 子宠 `route_settings_config(…)`），每宠键直接可读，那次改动想防的「读到全局面出厂默认」对 PetInstance 不成立。注释同步改写，写明为什么这里是 `self.config`、不能搬 `_identity_config()` |
 | `pet/vision.py` | +8 / −2 | `foreground_app_info()`：前台 pid == 本进程 pid 时返回空串（其余分支不动）。该函数只被三个识屏元数据调用点使用（`window.py:3504`、`overlay_shell.py:3448`、`screen_capture/vision_bridge.py:100`），其它前台消费方（全屏检测、proactive 门控、设置页）走的都是 `foreground_window_info()` 字典版，不受影响。另补顶层 `import os` |
 
 ### 测试
@@ -41,7 +41,7 @@ instance_id)`）同一视图；聊天窗已打开路径（`append_look_sync`）�
 - `pet/proactive/__init__.py`：主动识屏自己的元数据从 `foreground_window_info()`
   字典拼出（白名单门控同源），且由闲置观察者触发、不经过点击，没有「桌宠自己
   抢前台」的伪影；不属本次范围。
-- `AppShell._identity_config()` / `_chat_identity_config()`（app.py:3673/3693）：
+- `AppShell._identity_config()` / `_chat_identity_config()`（app.py:3668/3688）：
   进程级身份取源的语义（岛名/托盘勾选/`pet_name`）与其在 AppShell 上的全部调用点
   均正确，不动。
 - 两个 look worker（`window.py` / `overlay_shell.py`）与 `vision_bridge.py`：
@@ -102,7 +102,7 @@ PROBE ALL OK
   真 slot0 档案**（temp 目录）验证「不打开聊天窗 → 识屏问答出现在该角色会话里、
   日志零 ERROR」；「前台=桌宠自己」分支在真实 Win32 查询结果上改 pid 复验返回空串。
 - **边界与失败路径**：`chat_window is None` 前提、自身 pid 分支均有探针断言；
-  `enable_chat=False` / 空回复的早退守卫（app.py:1236）未改动，不在本 PR 语义内。
+  `enable_chat=False` / 空回复的早退守卫（app.py:1235）未改动，不在本 PR 语义内。
 - **无法自动验证的部分**：完整 GUI 端到端（真实点宠 → 视觉 API 真调用 → 气泡 +
   会话回看）需要已配置的视觉 Provider（真实 API 计费）+ 人机交互触发，不能在
   探针里替代。已给的排查证据：改动发生的两个接缝（sync 兜底分支、
